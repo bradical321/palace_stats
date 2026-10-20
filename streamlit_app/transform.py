@@ -102,7 +102,17 @@ def load_tagged_matches(storage) -> tuple[pd.DataFrame, pd.DataFrame]:
     matches.loc[gf > ga, "clean_result"] = "W"
     matches.loc[gf < ga, "clean_result"] = "L"
 
-    # Player overrides (manual stat corrections / exclusions for a bad capture).
+    player_matches = apply_player_overrides(storage, player_matches)
+
+    return matches, player_matches
+
+
+def apply_player_overrides(storage, player_matches: pd.DataFrame) -> pd.DataFrame:
+    """Manual stat corrections / exclusions for a bad capture (Admin page).
+    Every view of player rows must go through this — aggregates AND the
+    per-match rosters — or overrides show up in one place but not another."""
+    if player_matches.empty:
+        return player_matches
     overrides = storage.read_csv(config.TABLE_PLAYER_OVERRIDES, dtype=str)
     if not overrides.empty:
         overrides = overrides.copy()
@@ -131,17 +141,18 @@ def load_tagged_matches(storage) -> tuple[pd.DataFrame, pd.DataFrame]:
                 player_matches = player_matches.merge(excl, on=["matchId", "player_name"], how="left")
                 player_matches = player_matches[player_matches["_x"] != True].drop(columns=["_x"])  # noqa: E712
 
-    return matches, player_matches
+    return player_matches
 
 
 def get_match_rosters(storage, match_id: str) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Both rosters for one match, straight from the raw dual-perspective
-    table — used by the Match History detail view. Returns (our_players,
+    """Both rosters for one match, from the raw dual-perspective
+    table with player overrides applied — used by the Match History detail view. Returns (our_players,
     opponent_players)."""
     player_matches = storage.read_csv(config.TABLE_PLAYER_MATCHES, dtype={"matchId": str})
     if player_matches.empty:
         return pd.DataFrame(), pd.DataFrame()
     rows = player_matches[player_matches["matchId"].astype(str).str.strip() == str(match_id).strip()]
+    rows = apply_player_overrides(storage, rows.copy())
     is_ours = rows["is_our_club"].astype(str).str.strip().str.lower() == "true"
     return rows[is_ours].copy(), rows[~is_ours].copy()
 
