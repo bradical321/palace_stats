@@ -1,0 +1,23 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Secrets (never commit)
+.env
+secrets.env
+secrets.toml
+.streamlit/
+*.json
+
+# Data lives in Google Drive, not git
+*.csv
+*.xlsx
+*.log
+
+# OS / editor
+.DS_Store
+.RData
+.Rhistory
+.Rproj.user/
