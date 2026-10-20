@@ -121,7 +121,7 @@ def apply_player_overrides(storage, player_matches: pd.DataFrame) -> pd.DataFram
         player_matches["player_name"] = player_matches["player_name"].astype(str).str.strip()
 
         override_fields = ["rating", "passes_made", "pass_attempts", "goals",
-                            "assists", "shots", "tackles_made", "red_cards"]
+                            "assists", "shots", "tackles_made", "tackle_attempts", "red_cards"]
         present = [f for f in override_fields if f in overrides.columns]
         if present:
             ov = overrides[["matchId", "player_name"] + present].rename(

@@ -167,7 +167,8 @@ else:
             ]
 
         def _starting_value(field, cast):
-            if not existing.empty and str(existing.iloc[0].get(field, "")).strip() != "":
+            val = existing.iloc[0].get(field) if not existing.empty else None
+            if pd.notna(val) and str(val).strip() != "":
                 return cast(existing.iloc[0][field])
             return cast(raw[field])
 
@@ -181,10 +182,11 @@ else:
             goals = c2.number_input("Goals", value=_starting_value("goals", int), min_value=0, step=1)
             assists = c3.number_input("Assists", value=_starting_value("assists", int), min_value=0, step=1)
             shots = c4.number_input("Shots", value=_starting_value("shots", int), min_value=0, step=1)
-            c5, c6, c7 = st.columns(3)
+            c5, c6, c7, c8 = st.columns(4)
             passes_made = c5.number_input("Passes made", value=_starting_value("passes_made", int), min_value=0, step=1)
             pass_attempts = c6.number_input("Pass attempts", value=_starting_value("pass_attempts", int), min_value=0, step=1)
             tackles_made = c7.number_input("Tackles made", value=_starting_value("tackles_made", int), min_value=0, step=1)
+            tackle_attempts = c8.number_input("Tackle attempts", value=_starting_value("tackle_attempts", int), min_value=0, step=1)
             exclude_player = st.checkbox("Exclude this player from this match entirely", value=current_exclude)
             submitted = st.form_submit_button("💾 Save override", type="primary")
 
@@ -193,7 +195,7 @@ else:
             if overrides.empty:
                 overrides = pd.DataFrame(columns=[
                     "matchId", "date_str", "player_name", "rating", "passes_made", "pass_attempts",
-                    "goals", "assists", "shots", "tackles_made", "red_cards", "exclude",
+                    "goals", "assists", "shots", "tackles_made", "tackle_attempts", "red_cards", "exclude",
                 ])
             overrides = overrides[
                 ~((overrides["matchId"] == chosen_match_id) & (overrides["player_name"] == player_choice))
@@ -202,6 +204,7 @@ else:
                 "matchId": chosen_match_id, "date_str": raw["date"], "player_name": player_choice,
                 "rating": rating, "passes_made": passes_made, "pass_attempts": pass_attempts,
                 "goals": goals, "assists": assists, "shots": shots, "tackles_made": tackles_made,
+                "tackle_attempts": tackle_attempts,
                 "red_cards": raw.get("red_cards", 0), "exclude": "TRUE" if exclude_player else "FALSE",
             }
             overrides = pd.concat([overrides, pd.DataFrame([new_row])], ignore_index=True)
