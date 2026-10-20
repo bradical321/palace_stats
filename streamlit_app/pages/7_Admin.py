@@ -49,9 +49,8 @@ editable = editable.sort_values("date", ascending=False)
 n_review = int((editable["Match_Type"] == config.MATCH_TAG_NEEDS_REVIEW).sum())
 st.markdown(
     f"**{n_review}** match(es) need review out of {len(editable)} total. "
-    "EA's own ranked ladder is auto-tagged **League**; everything EA calls "
-    "'friendly' needs you to say whether it was our real **Comp** league, a "
-    "true casual **Friendly**, a **Cup** game, or should be **Exclude**d."
+    "Regular EAFC clubs games are auto-tagged **League**. Everything else needs a "
+    "tag: **Comp** (UFL 10v10), **Friendly**, **Cup**, or **Exclude**."
 )
 
 show_only_review = st.checkbox("Show only matches needing review", value=n_review > 0)

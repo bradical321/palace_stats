@@ -33,7 +33,7 @@ def render_sidebar() -> str:
     Returns the selected filter group name."""
     st.sidebar.markdown(
         f'<h1 style="display:flex;align-items:center;gap:0.5rem;padding-top:0">'
-        f'<img src="data:image/png;base64,{_logo_b64()}" style="height:2.2rem" alt="">'
+        f'<img src="data:image/png;base64,{_logo_b64()}" style="height:2.2rem;margin-right:0.75rem" alt="">'
         f'{config.CLUB_NAME}</h1>',
         unsafe_allow_html=True,
     )
@@ -50,10 +50,9 @@ def render_sidebar() -> str:
         options=["League", "Comp", "All"],
         index=2,
         help=(
-            "League = EA's own ranked ladder (auto-tagged). "
-            "Comp = our real competitive league, played through EA's 'friendly' "
-            "match type and tagged by hand on the Admin page. "
-            "All = League + Comp + tagged Friendlies/Cups."
+            "League = regular EAFC clubs games. "
+            "Comp = UFL 10v10 games (tagged on the Admin page). "
+            "All = League + Comp + Friendlies/Cups."
         ),
     )
     st.sidebar.divider()

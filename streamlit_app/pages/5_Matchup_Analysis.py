@@ -46,9 +46,8 @@ st.subheader("Performance vs. opponent tier")
 
 if group == "Comp":
     st.caption(
-        "Doesn't apply to Comp: opponent_club_stats.csv is each club's overall EA win %, "
-        "not their record within our specific competitive league — not a meaningful tier "
-        "for these opponents. Switch to League or All to see this."
+        "Doesn't apply to Comp: opponent tiers use each club's overall EAFC win %, "
+        "not their UFL 10v10 record. Switch to League or All to see this."
     )
 else:
     st.caption("Opponents bucketed into thirds by their own season win % (not fixed cutoffs — reflects who we've actually faced).")
