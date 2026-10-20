@@ -20,6 +20,19 @@ import pandas as pd
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 
 
+def _setting(name: str, default=None):
+    """Env var first (cron / local), then Streamlit secrets (Community Cloud)."""
+    if name in os.environ:
+        return os.environ[name]
+    try:
+        import streamlit as st
+        if name in st.secrets:
+            return st.secrets[name]
+    except Exception:
+        pass
+    return default
+
+
 class LocalStorage:
     """CSV files on disk. Good for local dev and for a single cron machine."""
 
@@ -68,11 +81,18 @@ class DriveStorage:
         from google.oauth2 import service_account
         from googleapiclient.discovery import build
 
-        self.folder_id = folder_id or os.environ["FC_DRIVE_FOLDER_ID"]
+        self.folder_id = folder_id or _setting("FC_DRIVE_FOLDER_ID")
 
         if service_account_info is None:
-            raw = os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"]
-            if os.path.exists(raw):
+            raw = _setting("GOOGLE_SERVICE_ACCOUNT_JSON")
+            if raw is None:
+                raise RuntimeError("GOOGLE_SERVICE_ACCOUNT_JSON is not set (env var or Streamlit secret)")
+            if not isinstance(raw, str):
+                # Pasted into secrets as a TOML table rather than a JSON string.
+                creds = service_account.Credentials.from_service_account_info(
+                    dict(raw), scopes=["https://www.googleapis.com/auth/drive"]
+                )
+            elif os.path.exists(raw):
                 creds = service_account.Credentials.from_service_account_file(
                     raw, scopes=["https://www.googleapis.com/auth/drive"]
                 )
@@ -143,7 +163,7 @@ def get_storage():
     if _storage_singleton is not None:
         return _storage_singleton
 
-    backend = os.environ.get("FC_STORAGE_BACKEND", "local").lower()
+    backend = str(_setting("FC_STORAGE_BACKEND", "local")).lower()
     if backend == "drive":
         _storage_singleton = DriveStorage()
     else:
