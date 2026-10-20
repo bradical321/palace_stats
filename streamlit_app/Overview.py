@@ -63,6 +63,5 @@ st.divider()
 # of "trending" before it's worth building. Revisit once there's more data.
 
 st.caption(
-    "Note: 'League' is EA's own ranked ladder; 'Comp' is our actual competitive "
-    "league, played through EA's friendly-match type and tagged by hand."
+    "Note: League is regular EAFC clubs games, Comp is UFL 10v10 games."
 )

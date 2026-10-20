@@ -1,6 +1,7 @@
 """Shared sidebar, data loading, and small render helpers used by every page."""
 from __future__ import annotations
 
+import base64
 import os
 
 import streamlit as st
@@ -10,6 +11,13 @@ import transform
 from storage import get_storage
 
 ADMIN_PASSWORD_ENV = "FC_ADMIN_PASSWORD"
+LOGO_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "palace_logo.png")
+
+
+@st.cache_resource
+def _logo_b64() -> str:
+    with open(LOGO_PATH, "rb") as f:
+        return base64.b64encode(f.read()).decode()
 
 
 @st.cache_data(ttl=300, show_spinner="Loading data...")
@@ -23,7 +31,12 @@ def _load_tagged_matches_cached(_storage, cache_key: int):
 def render_sidebar() -> str:
     """Club header + the League / Comp / All filter every page shares.
     Returns the selected filter group name."""
-    st.sidebar.title(f"⚽ {config.CLUB_NAME}")
+    st.sidebar.markdown(
+        f'<h1 style="display:flex;align-items:center;gap:0.5rem;padding-top:0">'
+        f'<img src="data:image/png;base64,{_logo_b64()}" style="height:2.2rem" alt="">'
+        f'{config.CLUB_NAME}</h1>',
+        unsafe_allow_html=True,
+    )
     st.sidebar.caption(f"Club ID {config.CLUB_ID} · {config.PLATFORM}")
 
     if "data_cache_key" not in st.session_state:
