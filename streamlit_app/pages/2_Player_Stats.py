@@ -26,7 +26,8 @@ if agg.empty:
     st.info("No qualifying games for this filter yet.")
     st.stop()
 
-min_games = st.slider("Minimum games played", 1, int(agg["games_played"].max()), 1)
+max_games = int(agg["games_played"].max())
+min_games = st.slider("Minimum games played", 1, max_games, min(3, max_games))
 display = agg[agg["games_played"] >= min_games].copy()
 
 st.subheader(f"{len(display)} players" + (f" · {position_group}" if position_group != "All" else ""))
