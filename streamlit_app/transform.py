@@ -352,22 +352,34 @@ def percentile_color(pct: float) -> str:
     return f"#{r:02x}{g:02x}{b:02x}"
 
 
-def tier_bg_style(value, series: pd.Series, higher_is_better: bool = True, max_alpha: float = 0.35) -> str:
-    """CSS background tint for one table cell, on the same red->neutral->green
-    scale. Alpha scales with distance from the 50th percentile, so a value
-    near the middle gets a barely-there tint and one near either extreme
-    gets a visibly stronger one — every quartile leans the right direction,
-    not just a top/bottom quarter cut with an untinted middle half."""
+def tier_bg_style(value, series: pd.Series, higher_is_better: bool = True) -> str:
+    """CSS for one Player Stats cell: quartile tint among the players shown
+    (bottom 25% strong red, 25-50 light red, 51-75 light green, top 25%
+    strong green), and blue + bold for the leader in that stat. Ties share
+    a tier; nobody is "best" when the top value is 0 (e.g. a goals column of
+    all zeros) or when everyone has the same value."""
     clean = pd.to_numeric(series, errors="coerce").dropna()
-    if pd.isna(value) or len(clean) < 4:
+    if pd.isna(value) or len(clean) < 4 or clean.nunique() < 2:
         return ""
+    best_value = clean.max() if higher_is_better else clean.min()
+    if value == best_value and (best_value != 0 or not higher_is_better):
+        r, g, b = _hex_to_rgb(config.TIER_BEST)
+        return f"background-color: rgba({r},{g},{b},0.28);font-weight:700;"
+
     pct_rank = (clean <= value).mean() * 100  # 0-100, fraction of the field at or below this value
     if not higher_is_better:
         pct_rank = 100 - pct_rank
-
-    r, g, b = _percentile_rgb(pct_rank)
-    alpha = abs(pct_rank - 50) / 50 * max_alpha
-    return f"background-color: rgba({r},{g},{b},{alpha:.2f});"
+    red = _hex_to_rgb(config.RATING_STATUS["critical"])
+    green = _hex_to_rgb(config.RATING_STATUS["good"])
+    if pct_rank <= 25:
+        (r, g, b), alpha = red, 0.32
+    elif pct_rank <= 50:
+        (r, g, b), alpha = red, 0.12
+    elif pct_rank <= 75:
+        (r, g, b), alpha = green, 0.13
+    else:
+        (r, g, b), alpha = green, 0.32
+    return f"background-color: rgba({r},{g},{b},{alpha});"
 
 
 # --- FBref-style percentile scouting report -----------------------------------

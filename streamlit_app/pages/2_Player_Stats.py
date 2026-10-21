@@ -32,7 +32,7 @@ display = agg[agg["games_played"] >= min_games].copy()
 
 st.subheader(f"{len(display)} players" + (f" · {position_group}" if position_group != "All" else ""))
 st.caption(
-    "🟩 Green = top among players shown · 🟥 Red = bottom · darker = further from the middle."
+    "Among players shown: 🟥 Bottom 25% · light red 25–50% · light green 51–75% · 🟩 Top 25% · 🟦 Best"
 )
 
 # Stat columns that get percentile-tier shading — everything except

@@ -134,6 +134,10 @@ RATING_STATUS = {
 }
 RATING_NEUTRAL = "#898781"   # muted ink — no rating / excluded game
 
+# Player Stats quartile shading: red -> green tints, plus blue for the leader
+# in each stat (blue, not gold, so "best" can't be misread as a caution).
+TIER_BEST = "#2563eb"
+
 RESULT_COLOR = {
     "W": RATING_STATUS["good"],
     "D": RATING_NEUTRAL,
