@@ -102,6 +102,14 @@ def load_tagged_matches(storage) -> tuple[pd.DataFrame, pd.DataFrame]:
     matches.loc[gf > ga, "clean_result"] = "W"
     matches.loc[gf < ga, "clean_result"] = "L"
 
+    # Player rows carry EA's own per-match result, which is unreliable for
+    # friendlies (e.g. a 3-0 win reported as "D") and ignores score
+    # overrides. Every player's result must follow the match's clean_result.
+    if not player_matches.empty:
+        result_by_match = matches.set_index("matchId")["clean_result"]
+        mapped = player_matches["matchId"].map(result_by_match)
+        player_matches["match_result"] = mapped.fillna(player_matches["match_result"])
+
     player_matches = apply_player_overrides(storage, player_matches)
 
     return matches, player_matches
