@@ -416,7 +416,10 @@ FBREF_STATS = [
 
 
 def calculate_player_radar_stats(player_rows: pd.DataFrame) -> dict:
-    """This player's per-game rates from their own match log."""
+    """This player's per-game rates from their own match log. Quit games
+    are dropped first, same as compute_player_aggregates, so Scouting and
+    Player Stats agree."""
+    player_rows = drop_quit_games(player_rows)
     if player_rows.empty:
         return {}
     n = len(player_rows)
