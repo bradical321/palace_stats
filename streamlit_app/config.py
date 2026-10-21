@@ -134,9 +134,17 @@ RATING_STATUS = {
 }
 RATING_NEUTRAL = "#898781"   # muted ink — no rating / excluded game
 
-# Player Stats quartile shading: red -> green tints, plus blue for the leader
-# in each stat (blue, not gold, so "best" can't be misread as a caution).
-TIER_BEST = "#2563eb"
+# Player Stats quartile shading: one distinct hue per quartile at similar
+# visual weight (yellow needs a stronger alpha to read as strongly as the
+# others), plus purple for the leader in each stat.
+# (label, hex, alpha) — bottom quartile first.
+TIER_COLORS = [
+    ("Bottom quartile", "#d03b3b", 0.28),
+    ("2nd quartile", "#fab219", 0.38),
+    ("3rd quartile", "#0ca30c", 0.26),
+    ("Top quartile", "#2563eb", 0.28),
+]
+TIER_BEST = ("Best", "#7c3aed", 0.40)
 
 RESULT_COLOR = {
     "W": RATING_STATUS["good"],

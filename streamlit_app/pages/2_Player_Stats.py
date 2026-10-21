@@ -31,9 +31,7 @@ min_games = st.slider("Minimum games played", 1, max_games, min(3, max_games))
 display = agg[agg["games_played"] >= min_games].copy()
 
 st.subheader(f"{len(display)} players" + (f" · {position_group}" if position_group != "All" else ""))
-st.caption(
-    "Among players shown: 🟥 Bottom 25% · light red 25–50% · light green 51–75% · 🟩 Top 25% · 🟦 Best"
-)
+st.markdown(transform.tier_legend_html(), unsafe_allow_html=True)
 
 # Stat columns that get percentile-tier shading — everything except
 # games_played (a volume stat, not a performance tier).

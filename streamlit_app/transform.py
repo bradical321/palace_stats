@@ -352,34 +352,40 @@ def percentile_color(pct: float) -> str:
     return f"#{r:02x}{g:02x}{b:02x}"
 
 
+def _tier_rgba(hex_color: str, alpha: float) -> str:
+    r, g, b = _hex_to_rgb(hex_color)
+    return f"rgba({r},{g},{b},{alpha})"
+
+
 def tier_bg_style(value, series: pd.Series, higher_is_better: bool = True) -> str:
-    """CSS for one Player Stats cell: quartile tint among the players shown
-    (bottom 25% strong red, 25-50 light red, 51-75 light green, top 25%
-    strong green), and blue + bold for the leader in that stat. Ties share
-    a tier; nobody is "best" when the top value is 0 (e.g. a goals column of
-    all zeros) or when everyone has the same value."""
+    """CSS for one Player Stats cell: quartile color among the players shown
+    (config.TIER_COLORS), and config.TIER_BEST + bold for the leader in that
+    stat. Ties share a tier; nobody is "best" when the top value is 0 (e.g. a
+    goals column of all zeros) or when everyone has the same value."""
     clean = pd.to_numeric(series, errors="coerce").dropna()
     if pd.isna(value) or len(clean) < 4 or clean.nunique() < 2:
         return ""
     best_value = clean.max() if higher_is_better else clean.min()
     if value == best_value and (best_value != 0 or not higher_is_better):
-        r, g, b = _hex_to_rgb(config.TIER_BEST)
-        return f"background-color: rgba({r},{g},{b},0.28);font-weight:700;"
+        _, hex_color, alpha = config.TIER_BEST
+        return f"background-color: {_tier_rgba(hex_color, alpha)};font-weight:700;"
 
     pct_rank = (clean <= value).mean() * 100  # 0-100, fraction of the field at or below this value
     if not higher_is_better:
         pct_rank = 100 - pct_rank
-    red = _hex_to_rgb(config.RATING_STATUS["critical"])
-    green = _hex_to_rgb(config.RATING_STATUS["good"])
-    if pct_rank <= 25:
-        (r, g, b), alpha = red, 0.32
-    elif pct_rank <= 50:
-        (r, g, b), alpha = red, 0.12
-    elif pct_rank <= 75:
-        (r, g, b), alpha = green, 0.13
-    else:
-        (r, g, b), alpha = green, 0.32
-    return f"background-color: rgba({r},{g},{b},{alpha});"
+    quartile = 0 if pct_rank <= 25 else 1 if pct_rank <= 50 else 2 if pct_rank <= 75 else 3
+    _, hex_color, alpha = config.TIER_COLORS[quartile]
+    return f"background-color: {_tier_rgba(hex_color, alpha)};"
+
+
+def tier_legend_html() -> str:
+    """One-line swatch legend matching tier_bg_style's colors."""
+    items = "".join(
+        f"<span style='display:inline-flex;align-items:center;gap:4px;margin-right:14px;'>"
+        f"<span style='width:12px;height:12px;border-radius:2px;background:{_tier_rgba(h, a)};'></span>{label}</span>"
+        for label, h, a in config.TIER_COLORS + [config.TIER_BEST]
+    )
+    return f"<div style='font-size:13px;color:#6b6a65;margin-bottom:6px;'>{items}</div>"
 
 
 # --- FBref-style percentile scouting report -----------------------------------
