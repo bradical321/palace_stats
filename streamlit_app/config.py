@@ -139,12 +139,12 @@ RATING_NEUTRAL = "#898781"   # muted ink — no rating / excluded game
 # others), plus purple for the leader in each stat.
 # (label, hex, alpha) — bottom quartile first.
 TIER_COLORS = [
-    ("Bottom quartile", "#d03b3b", 0.28),
-    ("2nd quartile", "#fab219", 0.38),
-    ("3rd quartile", "#0ca30c", 0.26),
-    ("Top quartile", "#2563eb", 0.28),
+    ("Bottom quartile", "#d03b3b", 0.42),
+    ("2nd quartile", "#fab219", 0.55),
+    ("3rd quartile", "#0ca30c", 0.38),
+    ("Top quartile", "#2563eb", 0.40),
 ]
-TIER_BEST = ("Best", "#7c3aed", 0.40)
+TIER_BEST = ("Best", "#7c3aed", 0.58)
 
 RESULT_COLOR = {
     "W": RATING_STATUS["good"],

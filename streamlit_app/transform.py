@@ -382,10 +382,10 @@ def tier_legend_html() -> str:
     """One-line swatch legend matching tier_bg_style's colors."""
     items = "".join(
         f"<span style='display:inline-flex;align-items:center;gap:4px;margin-right:14px;'>"
-        f"<span style='width:12px;height:12px;border-radius:2px;background:{_tier_rgba(h, a)};'></span>{label}</span>"
+        f"<span style='width:14px;height:14px;border-radius:3px;background:{_tier_rgba(h, a)};'></span>{label}</span>"
         for label, h, a in config.TIER_COLORS + [config.TIER_BEST]
     )
-    return f"<div style='font-size:13px;color:#6b6a65;margin-bottom:6px;'>{items}</div>"
+    return f"<div style='font-size:14px;font-weight:500;margin-bottom:8px;'>{items}</div>"
 
 
 # --- FBref-style percentile scouting report -----------------------------------
