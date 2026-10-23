@@ -3,14 +3,15 @@ of our players, filterable by position group.
 
 Three comparison pools:
   - "Our Squad" — our own players' per-game averages.
-  - "vs. Opponents: In Our Games" — how opposing players performed in games
+  - "vs. Opponents (Head to Head)" — how opposing players performed in games
     against us (opponent rows in player_matches.csv; exact per-match
     position). Each is a single game, so the pool is simulated N-game
     averages (transform.build_simulated_opponent_pool) to compare like
     with like.
-  - "vs. Opponents: Full Season" (opponent_player_stats.csv) — the same
-    clubs' EA season stats. Bigger pool, but position is each player's
-    usual position (favoritePosition), so the position filter is approximate.
+  - "vs. All Players (Season Stats)" — our squad plus every scouted
+    player's EA season stats (opponent_player_stats.csv): the big universe
+    of players. Position there is each player's usual position
+    (favoritePosition), so the position filter is approximate.
 """
 import pandas as pd
 import streamlit as st
@@ -54,12 +55,12 @@ with c1:
 with c2:
     pool_choice = st.radio(
         "Comparison pool",
-        options=["Our Squad", "vs. Opponents: In Our Games", "vs. Opponents: Full Season"],
+        options=["Our Squad", "vs. Opponents (Head to Head)", "vs. All Players (Season Stats)"],
         help=(
-            "Our Squad = our own players. "
-            "In Our Games = how opposing players did in games against us, compared over the same number "
-            "of games as this player. "
-            "Full Season = those same opponents' EA season stats across all their games (opponents only)."
+            "**Our Squad**: our own players.\n\n"
+            "**vs. Opponents (Head to Head)**: how opposing players did in games against us, "
+            "compared over the same number of games as this player.\n\n"
+            "**vs. All Players (Season Stats)**: our squad plus every scouted player's EA season stats."
         ),
     )
 
@@ -74,12 +75,12 @@ storage = get_storage()
 pool = transform.build_pool_from_player_matches(our_scoped, min_games=3)
 
 pool_note = f"Pool: {len(pool)} players"
-if pool_choice == "vs. Opponents: Full Season":
+if pool_choice == "vs. All Players (Season Stats)":
     opp_stats = storage.read_csv(config.TABLE_OPPONENT_PLAYER_STATS, dtype={"club_id": str})
     opp_pool = transform.build_season_totals_pool(opp_stats, min_games=5, position_group=position_group)
-    pool = opp_pool
-    pool_note = f"Pool: {len(pool)} opposing players (EA season stats)"
-elif pool_choice == "vs. Opponents: In Our Games":
+    pool = pd.concat([pool, opp_pool], ignore_index=True) if not opp_pool.empty else pool
+    pool_note = f"Pool: {len(pool)} players (our squad + scouted season stats)"
+elif pool_choice == "vs. Opponents (Head to Head)":
     all_player_matches = storage.read_csv(config.TABLE_PLAYER_MATCHES, dtype={"matchId": str})
     opp_rows = all_player_matches[all_player_matches["is_our_club"].astype(str).str.lower() == "false"]
     opp_rows = transform.drop_quit_games(transform.filter_by_position(opp_rows, position_group))

@@ -480,7 +480,7 @@ def build_pool_from_player_matches(player_matches_df: pd.DataFrame, min_games: i
 
 def build_simulated_opponent_pool(opp_rows: pd.DataFrame, n_games: int,
                                   iterations: int = 1000, seed: int = 0) -> pd.DataFrame:
-    """'vs. Opponents: In Our Games' pool. Almost every opposing player has
+    """'vs. Opponents (Head to Head)' pool. Almost every opposing player has
     exactly one game against us, so comparing a player's N-game average to
     single games pads both ends of the pool (a sea of 0-goal games, a few
     hat tricks). Instead, build `iterations` simulated opponents, each the
