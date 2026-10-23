@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Runs the collector at Mac local (Mountain) time: 12, 5pm, 7pm, 9pm, 11pm = 2pm, 7pm, 9pm, 11pm, 1am Eastern,
+     plus the daily 10:48 test run. If the Mac was asleep at a run time, launchd runs it once on wake.
+     caffeinate -i keeps the Mac awake until the run finishes. Wake times live in schedule_wakes.sh. -->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.palace.collection</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/caffeinate</string>
+        <string>-i</string>
+        <string>/bin/bash</string>
+        <string>/Users/bradreaume/Palace_Stats/streamlit_app/run_collection.sh</string>
+    </array>
+    <key>StartCalendarInterval</key>
+    <array>
+        <dict><key>Hour</key><integer>10</integer><key>Minute</key><integer>48</integer></dict>
+        <dict><key>Hour</key><integer>12</integer><key>Minute</key><integer>0</integer></dict>
+        <dict><key>Hour</key><integer>17</integer><key>Minute</key><integer>0</integer></dict>
+        <dict><key>Hour</key><integer>19</integer><key>Minute</key><integer>0</integer></dict>
+        <dict><key>Hour</key><integer>21</integer><key>Minute</key><integer>0</integer></dict>
+        <dict><key>Hour</key><integer>23</integer><key>Minute</key><integer>0</integer></dict>
+    </array>
+    <key>StandardOutPath</key>
+    <string>/Users/bradreaume/Palace_Stats/streamlit_app/collection_cron.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/bradreaume/Palace_Stats/streamlit_app/collection_cron.log</string>
+</dict>
+</plist>

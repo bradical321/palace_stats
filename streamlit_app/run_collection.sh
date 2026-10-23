@@ -1,6 +1,6 @@
 #!/bin/bash
 # Pulls new matches, then refreshes opponent scouting for anyone new.
-# Runs on a cron schedule — see the crontab entry (Mac local time) for timing.
+# Runs via launchd — see scheduling/com.palace.collection.plist for timing.
 cd "$(dirname "$0")"
 
 # Drive settings (FC_STORAGE_BACKEND, folder id, key path) live outside the repo.

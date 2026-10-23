@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Root daemon: tops up the wake schedule every 6 hours (and at boot). -->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.palace.schedule-wakes</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/Library/PalaceStats/schedule_wakes.sh</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>StartInterval</key>
+    <integer>21600</integer>
+</dict>
+</plist>
