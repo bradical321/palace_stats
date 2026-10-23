@@ -34,7 +34,7 @@ gf_pg = matches["clean_goals_for"].sum() / games
 ga_pg = matches["clean_goals_against"].sum() / games
 
 c1, c2, c3, c4, c5 = st.columns(5)
-c1.metric("Record", f"{wins}-{draws}-{losses}")
+c1.metric("Record (W-D-L)", f"{wins}-{draws}-{losses}")
 c2.metric("Win %", f"{win_pct}%")
 c3.metric("Goals / Game", f"{gf_pg:.2f}")
 c4.metric("Goals Against / Game", f"{ga_pg:.2f}")
@@ -42,49 +42,47 @@ c5.metric("Avg Goal Diff", f"{gf_pg - ga_pg:+.2f}")
 
 st.divider()
 
-# --- Form: last 10 games ------------------------------------------------------
-form = transform.compute_form(matches, n=10)
-st.subheader("Form (last 10)")
+# --- Form: last 10 games + points-per-game trend ------------------------------
+PPG_WINDOW = 10  # rolling window for the trend line; 5 was too jagged to read a trend
 
-fcol1, fcol2 = st.columns([2, 1])
+form = transform.compute_form(matches, n=10)
+fcol1, fcol2 = st.columns([1, 1.4], gap="large")
 with fcol1:
+    st.subheader("Form (last 10)")
     if form["results"]:
         st.markdown(ui.form_strip_html(form["results"]), unsafe_allow_html=True)
     else:
         st.caption("Not enough games yet.")
-    st.caption(f'Last 10 record: {form["record"]} · {form["ppg"]} pts/game')
+    st.caption(f'Last 10 record (W-D-L): {form["record"]} · {form["ppg"]} pts/game')
 with fcol2:
-    trend = transform.rolling_ppg(matches, window=5)
+    trend = transform.rolling_ppg(matches, window=PPG_WINDOW)
+    st.subheader(f"Points per game ({PPG_WINDOW}-game avg)")
     if len(trend) >= 2:
         last = trend.iloc[-1]
-        st.markdown(
-            f"<div style='font-size:14px;'>Points per game · 5-game avg "
-            f"<b style='font-size:18px;margin-left:6px;'>{last['rolling_ppg']:.1f}</b></div>",
-            unsafe_allow_html=True,
-        )
         line = "#2a78d6"
         fig = go.Figure(go.Scatter(
             x=trend["game"], y=trend["rolling_ppg"], mode="lines",
             line=dict(color=line, width=2),
             customdata=trend[["date", "opponent", "result", "score"]],
             hovertemplate="%{customdata[0]} vs %{customdata[1]}<br>%{customdata[2]} %{customdata[3]}"
-                          " · 5-game avg <b>%{y:.1f}</b><extra></extra>",
+                          f" · {PPG_WINDOW}-game avg <b>%{{y:.2f}}</b><extra></extra>",
         ))
         fig.add_trace(go.Scatter(
-            x=[last["game"]], y=[last["rolling_ppg"]], mode="markers",
-            marker=dict(color=line, size=8), hoverinfo="skip",
+            x=[last["game"]], y=[last["rolling_ppg"]], mode="markers+text",
+            marker=dict(color=line, size=8), text=[f"{last['rolling_ppg']:.1f}"],
+            textposition="middle right", textfont=dict(size=13), hoverinfo="skip",
         ))
         fig.update_layout(
-            height=110, margin=dict(l=0, r=0, t=4, b=0), showlegend=False,
+            height=170, margin=dict(l=0, r=28, t=6, b=0), showlegend=False,
             paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
             xaxis=dict(visible=False),
-            yaxis=dict(range=[0, 3.1], tickvals=[0, 1.5, 3], showgrid=True,
+            yaxis=dict(range=[0, 3.05], tickvals=[0, 1, 2, 3], showgrid=True,
                        gridcolor="rgba(128,128,128,0.18)", zeroline=False, tickfont=dict(size=10)),
             hovermode="x",
         )
         st.plotly_chart(fig, width="stretch", config={"displayModeBar": False}, theme="streamlit")
     else:
-        st.caption("Points-per-game trend appears after 6 games.")
+        st.caption(f"Trend appears after {PPG_WINDOW + 1} games.")
 
 st.divider()
 
