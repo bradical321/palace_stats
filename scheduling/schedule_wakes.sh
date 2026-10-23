@@ -3,7 +3,7 @@
 # before each collection run over the next 2 days. Safe to run repeatedly:
 # wakes that are already booked are skipped.
 # Keep RUN_TIMES in sync with com.palace.collection.plist (Mac local time).
-RUN_TIMES="10:48 12:00 17:00 19:00 21:00 23:00"
+RUN_TIMES="00:00 10:00 11:00 12:00 13:00 14:00 15:00 16:00 17:00 18:00 19:00 20:00 21:00 22:00 23:00"
 
 now=$(date +%s)
 booked=$(pmset -g sched)
