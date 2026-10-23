@@ -284,9 +284,11 @@ def compute_form(matches: pd.DataFrame, n: int = 10) -> dict:
 
 
 
-def rolling_ppg(matches: pd.DataFrame, window: int = 5) -> pd.DataFrame:
-    """Points per game (W=3, D=1) as a rolling `window`-game average, oldest
-    first — one row per game from the window-th game on."""
+def rolling_ppg(matches: pd.DataFrame, window: int = 5, weighted: bool = False) -> pd.DataFrame:
+    """Points per game (W=3, D=1) trend, oldest first. Plain rolling
+    `window`-game average, or (weighted=True) an exponentially weighted
+    average with span=`window` — recent games count most and older ones fade
+    out gradually instead of dropping off a cliff, so the line is smoother."""
     if matches.empty:
         return pd.DataFrame()
     df = matches.sort_values("timestamp").reset_index(drop=True)
@@ -297,7 +299,9 @@ def rolling_ppg(matches: pd.DataFrame, window: int = 5) -> pd.DataFrame:
         "opponent": df["opponent_club_name"],
         "result": df["clean_result"],
         "score": df["clean_goals_for"].astype(int).astype(str) + "–" + df["clean_goals_against"].astype(int).astype(str),
-        "rolling_ppg": pts.rolling(window, min_periods=window).mean(),
+        "points": pts,
+        "rolling_ppg": (pts.ewm(span=window, min_periods=window).mean() if weighted
+                        else pts.rolling(window, min_periods=window).mean()),
     }).dropna(subset=["rolling_ppg"])
 
 
