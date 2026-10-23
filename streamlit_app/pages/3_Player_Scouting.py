@@ -1,17 +1,16 @@
 """Player Scouting — FBref/FotMob-style percentile scouting report for one
 of our players, filterable by position group.
 
-Two different opponent comparison pools are offered because they trade off
-against each other and there's no clearly-right default yet:
-  - "Season Totals" (opponent_player_stats.csv) is a big pool — every
-    scouted club's full roster — but position is each player's
-    self-reported *usual* position (favoritePosition), not the position
-    they played in any specific game, so the position-group filter here is
-    approximate.
-  - "Head-to-Head" uses the opponent rows already sitting in
-    player_matches.csv — same per-match `position` field as our own data,
-    so the position filter is exact — but the pool is only as big as the
-    games we've actually played against them, which right now is small.
+Three comparison pools:
+  - "Our Squad" — our own players' per-game averages.
+  - "vs. Opponents: In Our Games" — how opposing players performed in games
+    against us (opponent rows in player_matches.csv; exact per-match
+    position). Each is a single game, so the pool is simulated N-game
+    averages (transform.build_simulated_opponent_pool) to compare like
+    with like.
+  - "vs. Opponents: Full Season" (opponent_player_stats.csv) — the same
+    clubs' EA season stats. Bigger pool, but position is each player's
+    usual position (favoritePosition), so the position filter is approximate.
 """
 import pandas as pd
 import streamlit as st
@@ -55,11 +54,12 @@ with c1:
 with c2:
     pool_choice = st.radio(
         "Comparison pool",
-        options=["Our Squad only", "+ Head-to-Head (games vs us only)", "+ Season Totals (all scouted clubs)"],
+        options=["Our Squad", "vs. Opponents: In Our Games", "vs. Opponents: Full Season"],
         help=(
-            "Season Totals = a big pool, but position is each opponent's usual position, not necessarily "
-            "the one they played against us. Head-to-Head = exact per-game position, but a much smaller pool "
-            "(only games we've actually played)."
+            "Our Squad = our own players. "
+            "In Our Games = how opposing players did in games against us, compared over the same number "
+            "of games as this player. "
+            "Full Season = those same opponents' EA season stats across all their games."
         ),
     )
 
@@ -73,20 +73,19 @@ if not player_stats:
 storage = get_storage()
 pool = transform.build_pool_from_player_matches(our_scoped, min_games=3)
 
-if pool_choice.startswith("+ Season Totals"):
+pool_note = f"Pool: {len(pool)} players"
+if pool_choice == "vs. Opponents: Full Season":
     opp_stats = storage.read_csv(config.TABLE_OPPONENT_PLAYER_STATS, dtype={"club_id": str})
     opp_pool = transform.build_season_totals_pool(opp_stats, min_games=5, position_group=position_group)
     pool = pd.concat([pool, opp_pool], ignore_index=True) if not opp_pool.empty else pool
-elif pool_choice.startswith("+ Head-to-Head"):
+    pool_note = f"Pool: {len(pool)} players"
+elif pool_choice == "vs. Opponents: In Our Games":
     all_player_matches = storage.read_csv(config.TABLE_PLAYER_MATCHES, dtype={"matchId": str})
     opp_rows = all_player_matches[all_player_matches["is_our_club"].astype(str).str.lower() == "false"]
-    opp_rows = transform.filter_by_position(opp_rows, position_group)
-    # min_games=1 here on purpose: we've only played most clubs once so far,
-    # so a per-player 3-game minimum (fine for our own roster, who all have
-    # plenty of games) would zero out virtually every opponent and make this
-    # pool collapse down to "Our Squad only" with nothing added.
-    opp_pool = transform.build_pool_from_player_matches(opp_rows, min_games=1)
-    pool = pd.concat([pool, opp_pool], ignore_index=True) if not opp_pool.empty else pool
+    opp_rows = transform.drop_quit_games(transform.filter_by_position(opp_rows, position_group))
+    n_games = len(transform.drop_quit_games(our_rows))
+    pool = transform.build_simulated_opponent_pool(opp_rows, n_games)
+    pool_note = f"Pool: {len(opp_rows)} opposing player-games vs us, compared over your {n_games} games"
 
 percentiles = transform.calculate_percentiles(player_stats, pool)
 
@@ -96,12 +95,21 @@ if not percentiles:
 
 rows = []
 for key, label in transform.FBREF_STATS:
+    if key not in player_stats:
+        continue
+    val = player_stats[key]
+    val_str = f"{val:.1f}" if key not in ("goals_per_game", "assists_per_game") else f"{val:.2f}"
     if key not in percentiles:
+        # e.g. Win Rate vs opponents — no meaningful pool, so the bar stays empty.
+        rows.append(
+            "<tr>"
+            f"<td style='padding:4px 8px;width:35%;'>{label}</td>"
+            f"<td style='padding:4px 8px;text-align:center;width:15%;'>{val_str}</td>"
+            "<td style='padding:4px 8px;width:50%;'></td></tr>"
+        )
         continue
     pct = percentiles[key]
     color = transform.percentile_color(pct)
-    val = player_stats[key]
-    val_str = f"{val:.1f}" if key not in ("goals_per_game", "assists_per_game") else f"{val:.2f}"
     rows.append(
         "<tr>"
         f"<td style='padding:4px 8px;width:35%;'>{label}</td>"
@@ -114,7 +122,7 @@ for key, label in transform.FBREF_STATS:
     )
 
 st.markdown(
-    f"<p style='color:#898781;font-size:12px;'>Pool: {len(pool)} players"
+    f"<p style='color:#898781;font-size:12px;'>{pool_note}"
     + (f" at {position_group}" if position_group != "All" else "") + "</p>"
     "<table style='width:100%;border-collapse:collapse;font-family:system-ui,-apple-system,sans-serif;font-size:13px;'>"
     "<thead><tr style='border-bottom:2px solid #c3c2b7;text-align:left;'>"

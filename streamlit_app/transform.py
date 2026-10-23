@@ -8,6 +8,7 @@ helpers the new app adds.
 """
 from __future__ import annotations
 
+import numpy as np
 import pandas as pd
 
 import config
@@ -474,6 +475,38 @@ def build_pool_from_player_matches(player_matches_df: pd.DataFrame, min_games: i
         stats["player_name"] = name
         rows.append(stats)
     return pd.DataFrame(rows)
+
+
+
+def build_simulated_opponent_pool(opp_rows: pd.DataFrame, n_games: int,
+                                  iterations: int = 1000, seed: int = 0) -> pd.DataFrame:
+    """'vs. Opponents: In Our Games' pool. Almost every opposing player has
+    exactly one game against us, so comparing a player's N-game average to
+    single games pads both ends of the pool (a sea of 0-goal games, a few
+    hat tricks). Instead, build `iterations` simulated opponents, each the
+    average of `n_games` opposing games drawn at random (with replacement)
+    from the head-to-head rows — an N-game average vs N-game averages.
+    win_rate is left blank: opponents' win rate vs us is just our loss rate."""
+    opp_rows = drop_quit_games(opp_rows)
+    if opp_rows.empty or n_games < 1:
+        return pd.DataFrame()
+    cols = ["goals", "assists", "shots", "passes_made", "pass_attempts", "tackles_made", "rating"]
+    arr = opp_rows[cols].apply(pd.to_numeric, errors="coerce").fillna(0).to_numpy()
+    rng = np.random.default_rng(seed)
+    sample = arr[rng.integers(0, len(arr), size=(iterations, n_games))]  # iterations x n_games x stats
+    goals, assists, shots, made, att, tackles, _ = sample.sum(axis=1).T
+    with np.errstate(divide="ignore", invalid="ignore"):
+        return pd.DataFrame({
+            "pass_completion_pct": np.where(att > 0, made / att * 100, np.nan),
+            "passes_per_game": made / n_games,
+            "goals_per_game": goals / n_games,
+            "assists_per_game": assists / n_games,
+            "shots_per_game": shots / n_games,
+            "shot_conversion_pct": np.where(shots > 0, goals / shots * 100, np.nan),
+            "tackles_per_game": tackles / n_games,
+            "avg_rating": sample[:, :, 6].mean(axis=1),
+            "win_rate": np.nan,
+        })
 
 
 def build_season_totals_pool(opponent_player_stats: pd.DataFrame, min_games: int = 5,
