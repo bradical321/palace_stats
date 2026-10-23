@@ -59,7 +59,7 @@ with c2:
             "Our Squad = our own players. "
             "In Our Games = how opposing players did in games against us, compared over the same number "
             "of games as this player. "
-            "Full Season = those same opponents' EA season stats across all their games."
+            "Full Season = those same opponents' EA season stats across all their games (opponents only)."
         ),
     )
 
@@ -77,8 +77,8 @@ pool_note = f"Pool: {len(pool)} players"
 if pool_choice == "vs. Opponents: Full Season":
     opp_stats = storage.read_csv(config.TABLE_OPPONENT_PLAYER_STATS, dtype={"club_id": str})
     opp_pool = transform.build_season_totals_pool(opp_stats, min_games=5, position_group=position_group)
-    pool = pd.concat([pool, opp_pool], ignore_index=True) if not opp_pool.empty else pool
-    pool_note = f"Pool: {len(pool)} players"
+    pool = opp_pool
+    pool_note = f"Pool: {len(pool)} opposing players (EA season stats)"
 elif pool_choice == "vs. Opponents: In Our Games":
     all_player_matches = storage.read_csv(config.TABLE_PLAYER_MATCHES, dtype={"matchId": str})
     opp_rows = all_player_matches[all_player_matches["is_our_club"].astype(str).str.lower() == "false"]
