@@ -84,18 +84,25 @@ def _trend_figure(trend, avg_ppg: float) -> go.Figure:
         hovertemplate="%{customdata[0]} vs %{customdata[1]}<br>%{customdata[2]} %{customdata[3]}"
                       " · trend <b>%{y:.2f}</b><extra></extra>",
     ))
-    last = trend.iloc[-1]
+    # No y-axis: label the first, lowest, highest and latest points instead,
+    # so the line can fill the space and still be readable.
+    seen = {}  # point index -> label position; the latest point always labels to the right
+    for i, pos in [(0, "middle left"), (int(y.values.argmin()), "bottom center"),
+                   (int(y.values.argmax()), "top center")]:
+        seen.setdefault(i, pos)
+    seen[len(y) - 1] = "middle right"
     fig.add_trace(go.Scatter(
-        x=[last["game"]], y=[last["rolling_ppg"]], mode="markers+text",
-        marker=dict(color="#55534e", size=8), text=[f"{last['rolling_ppg']:.1f}"],
-        textposition="middle right", textfont=dict(size=13), hoverinfo="skip",
+        x=[x.iloc[i] for i in seen], y=[y.iloc[i] for i in seen], mode="markers+text",
+        marker=dict(color="#55534e", size=[9 if i == len(y) - 1 else 6 for i in seen]),
+        text=[f"{y.iloc[i]:.1f}" for i in seen], textposition=list(seen.values()),
+        textfont=dict(size=12), hoverinfo="skip", cliponaxis=False,
     ))
+    pad = max((y.max() - y.min()) * 0.25, 0.15)
     fig.update_layout(
-        height=190, margin=dict(l=0, r=28, t=6, b=0), showlegend=False,
+        height=190, margin=dict(l=32, r=32, t=8, b=8), showlegend=False,
         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
         xaxis=dict(visible=False),
-        yaxis=dict(range=[0, 3.05], tickvals=[0, 1, 2, 3], showgrid=True,
-                   gridcolor="rgba(128,128,128,0.15)", zeroline=False, tickfont=dict(size=10)),
+        yaxis=dict(visible=False, range=[min(y.min(), avg_ppg) - pad, max(y.max(), avg_ppg) + pad]),
         hovermode="x",
     )
     return fig
