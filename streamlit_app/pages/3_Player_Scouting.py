@@ -58,9 +58,10 @@ with c2:
         options=["Our Squad", "vs. Opponents (Head to Head)", "vs. All Players (Season Stats)"],
         help=(
             "**Our Squad**: our own players.\n\n"
-            "**vs. Opponents (Head to Head)**: how opposing players did in games against us, "
-            "compared over the same number of games as this player.\n\n"
-            "**vs. All Players (Season Stats)**: our squad plus every scouted player's EA season stats."
+            "**vs. Opponents (Head to Head)**: compared to how opposing players at the same "
+            "position performed against us.\n\n"
+            "**vs. All Players (Season Stats)**: our squad plus every scouted player's EA season stats. "
+            "Uses each player's reported primary position, so best used with **All** positions."
         ),
     )
 
