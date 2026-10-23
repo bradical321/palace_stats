@@ -283,6 +283,24 @@ def compute_form(matches: pd.DataFrame, n: int = 10) -> dict:
     }
 
 
+
+def rolling_ppg(matches: pd.DataFrame, window: int = 5) -> pd.DataFrame:
+    """Points per game (W=3, D=1) as a rolling `window`-game average, oldest
+    first — one row per game from the window-th game on."""
+    if matches.empty:
+        return pd.DataFrame()
+    df = matches.sort_values("timestamp").reset_index(drop=True)
+    pts = df["clean_result"].map({"W": 3, "D": 1, "L": 0})
+    return pd.DataFrame({
+        "game": range(1, len(df) + 1),
+        "date": pd.to_datetime(df["date"]).dt.strftime("%b %-d"),
+        "opponent": df["opponent_club_name"],
+        "result": df["clean_result"],
+        "score": df["clean_goals_for"].astype(int).astype(str) + "–" + df["clean_goals_against"].astype(int).astype(str),
+        "rolling_ppg": pts.rolling(window, min_periods=window).mean(),
+    }).dropna(subset=["rolling_ppg"])
+
+
 def build_win_shares_inputs(matches: pd.DataFrame, player_matches: pd.DataFrame,
                             opponent_club_stats: pd.DataFrame, archetype_map: pd.DataFrame = None) -> pd.DataFrame:
     """Assemble the flat table the win-shares model will eventually train on:
