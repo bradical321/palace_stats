@@ -636,30 +636,119 @@ def performance_by_lineup_diff(matches: pd.DataFrame) -> pd.DataFrame:
         return pd.DataFrame()
 
     df = matches.copy()
-    diff = pd.to_numeric(df["player_count_difference"], errors="coerce")
-
-    def _bucket(d):
-        if pd.isna(d):
-            return None
-        if d <= -2:
-            return "Short 2+"
-        if d == -1:
-            return "Short 1"
-        if d == 0:
-            return "Even"
-        if d == 1:
-            return "Up 1"
-        return "Up 2+"
-
-    df["size_bucket"] = diff.map(_bucket)
+    df["size_bucket"] = pd.to_numeric(df["player_count_difference"], errors="coerce").map(lineup_bucket)
     df = df.dropna(subset=["size_bucket"])
     if df.empty:
         return pd.DataFrame()
 
     out = df.groupby("size_bucket", observed=True).apply(_record_summary, include_groups=False).reset_index()
-    order = ["Short 2+", "Short 1", "Even", "Up 1", "Up 2+"]
-    out["_order"] = out["size_bucket"].map(order.index)
+    out["_order"] = out["size_bucket"].map(config.LINEUP_BUCKETS.index)
     return out.sort_values("_order").drop(columns="_order").reset_index(drop=True)
+
+
+def lineup_bucket(diff):
+    """Our lineup size minus the opponent's -> one of config.LINEUP_BUCKETS."""
+    if pd.isna(diff):
+        return None
+    if diff <= -2:
+        return "Short 2+"
+    if diff == -1:
+        return "Short 1"
+    if diff == 0:
+        return "Even"
+    if diff == 1:
+        return "Up 1"
+    return "Up 2+"
+
+
+def _competition_inputs(matches: pd.DataFrame, opponent_club_stats: pd.DataFrame) -> pd.DataFrame:
+    """Per-match opponent win % and capped lineup difference (NaN when the
+    opponent hasn't been scouted or lineup sizes are missing)."""
+    opp_win = opponent_club_stats.assign(club_id=opponent_club_stats["club_id"].astype(str)) \
+        .drop_duplicates("club_id").set_index("club_id")["win_pct"]
+    cap = config.LINEUP_DIFF_CAP
+    return pd.DataFrame({
+        "opp_win_pct": pd.to_numeric(matches["opponent_club_id"].astype(str).map(opp_win), errors="coerce"),
+        "lineup_diff": pd.to_numeric(matches["player_count_difference"], errors="coerce").clip(-cap, cap),
+    }, index=matches.index)
+
+
+def fit_competition_model(matches: pd.DataFrame, opponent_club_stats: pd.DataFrame) -> dict | None:
+    """Least-squares fit of points per game (W=3, D=1, L=0) on opponent
+    season win % and our lineup size minus theirs. Comp (UFL) games are left
+    out since opponent win % is their EAFC record, not UFL. Returns the
+    coefficients plus the expected-points cutoffs that split the fitted games
+    into thirds, or None with too little data to fit."""
+    if matches.empty or opponent_club_stats is None or opponent_club_stats.empty:
+        return None
+    df = matches[matches["Match_Type"] != config.MATCH_TAG_COMP]
+    x = _competition_inputs(df, opponent_club_stats)
+    x["pts"] = df["clean_result"].map({"W": 3, "D": 1, "L": 0})
+    x = x.dropna()
+    if len(x) < 20 or x["opp_win_pct"].nunique() < 2 or x["lineup_diff"].nunique() < 2:
+        return None
+
+    X = np.column_stack([np.ones(len(x)), x["opp_win_pct"], x["lineup_diff"]])
+    coef, *_ = np.linalg.lstsq(X, x["pts"].to_numpy(), rcond=None)
+    expected = X @ coef
+    return {
+        "intercept": coef[0],
+        "opp_win_pct": coef[1],
+        "lineup_diff": coef[2],
+        "cutoffs": tuple(np.quantile(expected, [1 / 3, 2 / 3])),
+        "n_games": len(x),
+    }
+
+
+def add_competition_level(matches: pd.DataFrame, opponent_club_stats: pd.DataFrame,
+                          model: dict | None) -> pd.DataFrame:
+    """Add `expected_points` and `competition_level` (Hard / Normal / Easy,
+    NA when inputs are missing) columns using a fit_competition_model() result."""
+    df = matches.copy()
+    if df.empty or model is None:
+        df["expected_points"] = np.nan
+        df["competition_level"] = pd.NA
+        return df
+
+    x = _competition_inputs(df, opponent_club_stats)
+    df["expected_points"] = (model["intercept"] + model["opp_win_pct"] * x["opp_win_pct"]
+                             + model["lineup_diff"] * x["lineup_diff"])
+    low, high = model["cutoffs"]
+    level = pd.Series(pd.NA, index=df.index, dtype="object")
+    level[df["expected_points"] < low] = "Hard"
+    level[df["expected_points"].between(low, high, inclusive="left")] = "Normal"
+    level[df["expected_points"] >= high] = "Easy"
+    df["competition_level"] = level
+    return df
+
+
+def filter_by_competition(matches: pd.DataFrame, player_matches: pd.DataFrame,
+                          opponent_club_stats: pd.DataFrame, model: dict | None,
+                          level: str) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Keep only matches (and their player rows) at one competition level.
+    'All' is a no-op."""
+    if level == "All" or matches.empty:
+        return matches, player_matches
+    leveled = add_competition_level(matches, opponent_club_stats, model)
+    keep = leveled[leveled["competition_level"] == level]
+    keep_ids = set(keep["matchId"])
+    keep_players = player_matches[player_matches["matchId"].isin(keep_ids)] if not player_matches.empty else player_matches
+    return keep, keep_players
+
+
+def filter_current_form(player_matches: pd.DataFrame, n_games: int = config.FORM_GAMES,
+                        max_days: int = config.FORM_MAX_DAYS) -> pd.DataFrame:
+    """Each player's most recent `n_games` rows, only counting games from the
+    last `max_days`. Quit games are dropped first so a disconnect doesn't
+    use up one of the N slots."""
+    if player_matches.empty:
+        return player_matches
+    df = drop_quit_games(player_matches)
+    ts = pd.to_numeric(df["timestamp"], errors="coerce")
+    cutoff = pd.Timestamp.now(tz="UTC").timestamp() - max_days * 86400
+    df = df[ts >= cutoff].assign(_ts=ts)
+    df = df.sort_values("_ts", ascending=False).groupby("player_name").head(n_games)
+    return df.drop(columns="_ts")
 
 
 def calculate_percentiles(player_stats: dict, pool: pd.DataFrame) -> dict:

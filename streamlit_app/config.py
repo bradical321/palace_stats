@@ -84,6 +84,22 @@ FILTER_GROUPS = {
 # a rare keeper appearance doesn't skew someone's outfield stats.
 POSITION_GROUPS = ["All", "Defender", "Midfielder", "Forward"]
 
+# --- Competition level -------------------------------------------------------
+# Each match gets a Hard / Normal / Easy level from a model fit on our own
+# results: expected points ~ opponent season win % + lineup size difference
+# (see transform.fit_competition_model). Games are split into thirds by
+# expected points. Opponent win % is their overall EAFC record, so this
+# doesn't apply to Comp (UFL) games.
+COMPETITION_LEVELS = ["All", "Hard", "Normal", "Easy"]
+LINEUP_DIFF_CAP = 3  # treat 4+ players up/down the same as 3 when fitting
+LINEUP_BUCKETS = ["Short 2+", "Short 1", "Even", "Up 1", "Up 2+"]
+
+# --- Current form ------------------------------------------------------------
+# Player Stats "Current form": each player's last N games in the selected
+# position group, only counting games within the last FORM_MAX_DAYS.
+FORM_GAMES = 10
+FORM_MAX_DAYS = 30
+
 # --- Archetypes --------------------------------------------------------------
 # EA does not publish archetypeid -> name mappings, and the ids are not simply
 # numbered per position (we've observed e.g. id 4,5,6 appearing under both
